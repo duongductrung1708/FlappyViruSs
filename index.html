@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy ViruSs</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameOver" class="game-over hidden">
+            <h1>Kết thúc</h1>
+            <p>Anh chỉ có <span id="finalScore">0</span> em thôi</p>
+            <button id="restartBtn">Chơi lại</button>
+        </div>
+    </div>
+    <audio id="backgroundMusic" loop>
+        <source src="audio/sunghiepchuong.mp3" type="audio/mpeg">
+    </audio>
+    <script src="script.js"></script>
+</body>
+
+</html>
