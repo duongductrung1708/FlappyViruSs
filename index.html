@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,18 @@
 
 <body>
     <div class="game-container">
-        <canvas id="gameCanvas"></canvas>
+        <!-- Thêm nút âm lượng vào góc trên bên phải -->
+        <div class="volume-control">
+            <button id="volumeBtn">🔊</button>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.7">
+        </div>
+
+        <div id="startScreen" class="start-screen">
+            <h1>FLAPPY VIRUSS</h1>
+            <p>Chạm màn hình hoặc nhấn SPACE để bắt đầu</p>
+            <div class="bird-preview"></div>
+        </div>
+        <canvas id="gameCanvas" class="hidden"></canvas>
         <div id="gameOver" class="game-over hidden">
             <h1>Kết thúc</h1>
             <p>Anh chỉ có <span id="finalScore">0</span> em thôi</p>

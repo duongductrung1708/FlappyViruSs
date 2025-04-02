@@ -4,69 +4,119 @@ const gameOverScreen = document.getElementById("gameOver");
 const finalScoreText = document.getElementById("finalScore");
 const restartBtn = document.getElementById("restartBtn");
 const backgroundMusic = document.getElementById("backgroundMusic");
+const startScreen = document.getElementById("startScreen");
+const currentScoreDisplay = document.getElementById("currentScore");
+const volumeBtn = document.getElementById("volumeBtn");
+const volumeSlider = document.getElementById("volumeSlider");
 
-// Thiết lập canvas
-canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
-canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight;
+// Game state object
+const game = {
+    bird: {
+        x: 50,
+        y: 300,
+        width: 60,
+        height: 45,
+        gravity: 0.5,
+        lift: -10,
+        velocity: 0
+    },
+    pipes: [],
+    gap: 200,
+    pipeWidth: 40,
+    pipeSpeed: 2,
+    score: 0,
+    isRunning: false,
+    lastTime: 0,
+    pipeInterval: null,
+    animationFrameId: null
+};
 
-// Tải hình ảnh chim
+// Setup canvas
+function setupCanvas() {
+    canvas.width = Math.min(800, window.innerWidth);
+    canvas.height = Math.min(600, window.innerHeight);
+    game.bird.y = canvas.height / 2;
+    
+    const isMobile = window.innerWidth < 768;
+    game.gap = isMobile ? 250 : 200;
+    game.pipeWidth = isMobile ? 70 : 50;
+    game.bird.width = isMobile ? 70 : 60;
+    game.bird.height = isMobile ? 52 : 45;
+}
+setupCanvas();
+
+// Load images
 const birdImg = new Image();
 birdImg.src = "images/16f842d25d5aed04b44b-removebg-preview.png";
 
-// Tải danh sách ảnh ống cột
 const pipeImages = [
-    new Image(),
-    new Image(),
-    new Image()
-];
-pipeImages[0].src = "images/dung-dich-ve-sinh-phu-nu-lactacyd-odor-fresh-ngan-mui-250ml.png";
-pipeImages[1].src = "images/pngtree-sanitary-napkins-png-image_14168960.avif";
-pipeImages[2].src = "images/pngtree-top-rated-toothbrushes-for-effective-plaque-removal-png-image_16220002.png";
+    "images/dung-dich-ve-sinh-phu-nu-lactacyd-odor-fresh-ngan-mui-250ml.png",
+    "images/pngtree-sanitary-napkins-png-image_14168960.avif",
+    "images/pngtree-top-rated-toothbrushes-for-effective-plaque-removal-png-image_16220002.png"
+].map(path => {
+    const img = new Image();
+    img.src = path;
+    return img;
+});
 
-// Biến trò chơi
-let bird = {
-    x: 50,
-    y: canvas.height / 2,
-    width: 60,
-    height: 45,
-    gravity: 0.7,
-    lift: -10,
-    velocity: 0
-};
-
-let pipes = [];
-let gap = window.innerWidth < 768 ? 250 : 200;
-let pipeWidth = window.innerWidth < 768 ? 70 : 50;
-let pipeSpeed = window.innerWidth < 768 ? 120 : 150;
-let score = 0;
-let gameRunning = true;
-let lastTime = performance.now();
-let pipeInterval;
-
-// Điều chỉnh cho kích thước màn hình
-function adjustForScreenSize() {
-    const isMobile = window.innerWidth < 768;
+// Volume control functions
+function setupVolumeControls() {
+    // Set initial volume
+    backgroundMusic.volume = 0.7;
+    volumeSlider.value = 0.7;
     
-    gap = isMobile ? 250 : 200;
-    pipeWidth = isMobile ? 70 : 50;
-    pipeSpeed = isMobile ? 120 : 150;
-    bird.width = isMobile ? 70 : 60;
-    bird.height = isMobile ? 52 : 45;
+    // Handle volume slider changes
+    volumeSlider.addEventListener("input", function() {
+        backgroundMusic.volume = this.value;
+        updateVolumeIcon();
+    });
     
-    clearInterval(pipeInterval);
-    pipeInterval = setInterval(spawnPipe, isMobile ? 3500 : 3000);
+    // Handle mute button click
+    volumeBtn.addEventListener("click", function() {
+        if (backgroundMusic.volume > 0) {
+            backgroundMusic.volume = 0;
+            volumeSlider.value = 0;
+        } else {
+            backgroundMusic.volume = 0.7;
+            volumeSlider.value = 0.7;
+        }
+        updateVolumeIcon();
+    });
+    
+    // Update volume icon based on current volume
+    function updateVolumeIcon() {
+        if (backgroundMusic.volume === 0) {
+            volumeBtn.textContent = "🔇";
+        } else if (backgroundMusic.volume < 0.5) {
+            volumeBtn.textContent = "🔉";
+        } else {
+            volumeBtn.textContent = "🔊";
+        }
+    }
 }
 
-// Thêm ống mới với ảnh random
+// Adjust for screen size
+function adjustForScreenSize() {
+    const isMobile = window.innerWidth < 768;
+    game.gap = isMobile ? 250 : 200;
+    game.pipeWidth = isMobile ? 70 : 50;
+    game.bird.width = isMobile ? 70 : 60;
+    game.bird.height = isMobile ? 52 : 45;
+    
+    clearInterval(game.pipeInterval);
+    game.pipeInterval = setInterval(spawnPipe, isMobile ? 2000 : 1500);
+}
+
+// Spawn new pipes
 function spawnPipe() {
-    if (!gameRunning) return;
+    if (!game.isRunning) return;
     
     const minHeight = 100;
-    const maxHeight = canvas.height - gap - minHeight;
-    let pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
-    
+    const maxHeight = canvas.height - game.gap - minHeight;
+    const pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
     const randomPipeImg = pipeImages[Math.floor(Math.random() * pipeImages.length)];
-    pipes.push({
+    
+    game.pipes.push({
         x: canvas.width,
         topHeight: pipeHeight,
         pipeImg: randomPipeImg,
@@ -74,114 +124,208 @@ function spawnPipe() {
     });
 }
 
-// Vẽ trò chơi
-function draw(currentTime) {
-    if (!gameRunning) return;
+// Check collision
+function checkCollision(pipe) {
+    const bird = game.bird;
+    return (
+        bird.x + bird.width > pipe.x &&
+        bird.x < pipe.x + game.pipeWidth &&
+        (bird.y < pipe.topHeight || bird.y + bird.height > pipe.topHeight + game.gap)
+    );
+}
 
-    const dt = (currentTime - lastTime) / 1000;
-    lastTime = currentTime;
+// Draw game
+function draw() {
+    if (!game.isRunning) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Vẽ chim
-    ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+    // Update bird position
+    game.bird.velocity += game.bird.gravity;
+    game.bird.y += game.bird.velocity;
 
-    // Cập nhật vị trí chim
-    bird.velocity += bird.gravity * dt * 60;
-    bird.y += bird.velocity * dt * 60;
-
-    if (bird.y + bird.height > canvas.height || bird.y < 0) {
-        endGame();
-        return;
+    // Check ground/ceiling collision
+    if (game.bird.y + game.bird.height > canvas.height || game.bird.y < 0) {
+        return endGame();
     }
 
-    // Vẽ và di chuyển ống
-    for (let i = pipes.length - 1; i >= 0; i--) {
-        let p = pipes[i];
-        p.x -= pipeSpeed * dt;
+    // Process pipes
+    for (let i = game.pipes.length - 1; i >= 0; i--) {
+        const pipe = game.pipes[i];
+        pipe.x -= game.pipeSpeed;
 
-        // Hiệu ứng mờ xung quanh cột
-        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-        ctx.fillRect(p.x - 10, 0, pipeWidth + 20, p.topHeight);
-        ctx.fillRect(p.x - 10, p.topHeight + gap, pipeWidth + 20, canvas.height - p.topHeight - gap);
+        // Draw blur effect around pipes
+        const blurRadius = 15;
+        const glowColor = 'rgba(255, 255, 255, 0.3)';
+        
+        // Top pipe blur
+        ctx.save();
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = blurRadius;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = glowColor;
+        ctx.fillRect(pipe.x - blurRadius/2, 0, game.pipeWidth + blurRadius, pipe.topHeight);
+        ctx.restore();
+        
+        // Bottom pipe blur
+        ctx.save();
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = blurRadius;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = glowColor;
+        ctx.fillRect(pipe.x - blurRadius/2, pipe.topHeight + game.gap, 
+                    game.pipeWidth + blurRadius, canvas.height - pipe.topHeight - game.gap);
+        ctx.restore();
 
-        // Vẽ ống với ảnh random
-        ctx.drawImage(p.pipeImg, p.x, 0, pipeWidth, p.topHeight);
-        ctx.drawImage(p.pipeImg, p.x, p.topHeight + gap, pipeWidth, canvas.height - p.topHeight - gap);
+        // Draw pipes
+        ctx.drawImage(pipe.pipeImg, pipe.x, 0, game.pipeWidth, pipe.topHeight);
+        ctx.drawImage(pipe.pipeImg, pipe.x, pipe.topHeight + game.gap, 
+                     game.pipeWidth, canvas.height - pipe.topHeight - game.gap);
 
-        // Kiểm tra va chạm
-        if (
-            bird.x + bird.width > p.x &&
-            bird.x < p.x + pipeWidth &&
-            (bird.y < p.topHeight || bird.y + bird.height > p.topHeight + gap)
-        ) {
-            endGame();
-            return;
+        // Check collision
+        if (checkCollision(pipe)) {
+            return endGame();
         }
 
-        // Tăng điểm
-        if (!p.passed && bird.x > p.x + pipeWidth) {
-            p.passed = true;
-            score++;
+        // Increase score
+        if (!pipe.passed && game.bird.x > pipe.x + game.pipeWidth + 5) {
+            pipe.passed = true;
+            game.score++;
+            if (currentScoreDisplay) currentScoreDisplay.textContent = game.score;
         }
 
-        if (p.x + pipeWidth < 0) pipes.splice(i, 1);
+        // Remove passed pipes
+        if (pipe.x + game.pipeWidth < 0) {
+            game.pipes.splice(i, 1);
+        }
     }
 
-    // Vẽ điểm số
+    // Draw bird
+    ctx.drawImage(birdImg, game.bird.x, game.bird.y, game.bird.width, game.bird.height);
+
+    // Draw score
     ctx.fillStyle = "white";
     ctx.font = "24px Arial";
-    ctx.fillText("Score: " + score, 20, 40);
+    ctx.fillText("Score: " + game.score, 20, 40);
 
-    requestAnimationFrame(draw);
+    game.animationFrameId = requestAnimationFrame(draw);
 }
 
-// Điều khiển chim
-document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && gameRunning) {
-        bird.velocity = bird.lift;
+// Start game
+function startGame() {
+    startScreen.classList.add("hidden");
+    canvas.classList.remove("hidden");
+    game.isRunning = true;
+    game.score = 0;
+    if (currentScoreDisplay) {
+        currentScoreDisplay.textContent = "0";
     }
-});
+    
+    // Play music with current volume
+    backgroundMusic.currentTime = 0;
+    backgroundMusic.play().catch(e => {
+        console.log("Autoplay prevented:", e);
+    });
+    
+    resetGame();
+}
 
-canvas.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    if (gameRunning) {
-        bird.velocity = bird.lift;
-    }
-});
-
-// Kết thúc game
+// End game
 function endGame() {
-    gameRunning = false;
+    game.isRunning = false;
+    cancelAnimationFrame(game.animationFrameId);
     backgroundMusic.pause();
-    finalScoreText.textContent = score;
+    finalScoreText.textContent = game.score;
     gameOverScreen.classList.remove("hidden");
+    
+    // Shake effect
+    canvas.style.transform = 'translateX(5px)';
+    setTimeout(() => {
+        canvas.style.transform = 'translateX(-5px)';
+        setTimeout(() => canvas.style.transform = 'translateX(0)', 100);
+    }, 100);
 }
 
 // Reset game
 function resetGame() {
-    bird.y = canvas.height / 2;
-    bird.velocity = 0;
-    pipes = [];
-    score = 0;
-    gameRunning = true;
+    // Keep current volume when resetting
+    const currentVolume = backgroundMusic.volume;
+    
+    game.bird.y = canvas.height / 2;
+    game.bird.velocity = 0;
+    game.pipes = [];
+    game.score = 0;
+    game.isRunning = true;
     gameOverScreen.classList.add("hidden");
+    
+    // Reset music with current volume
     backgroundMusic.currentTime = 0;
-    backgroundMusic.play();
+    backgroundMusic.volume = currentVolume;
+    backgroundMusic.play().catch(e => {
+        console.log("Music restart prevented:", e);
+    });
+    
     adjustForScreenSize();
     spawnPipe();
-    lastTime = performance.now();
-    requestAnimationFrame(draw);
+    
+    if (currentScoreDisplay) {
+        currentScoreDisplay.textContent = "0";
+    }
+    
+    game.animationFrameId = requestAnimationFrame(draw);
 }
 
-// Nút chơi lại
-restartBtn.addEventListener("click", resetGame);
+// Handle controls
+function handleTap(e) {
+    e.preventDefault();
+    if (!game.isRunning && !startScreen.classList.contains("hidden")) {
+        startGame();
+    } else if (game.isRunning) {
+        game.bird.velocity = game.bird.lift;
+    }
+}
 
-// Theo dõi thay đổi kích thước màn hình
-window.addEventListener('resize', adjustForScreenSize);
+function handleControls() {
+    // Keyboard control
+    document.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+            e.preventDefault();
+            handleTap(e);
+        }
+    });
 
-// Khởi tạo game
-adjustForScreenSize();
-backgroundMusic.play();
-spawnPipe();
-requestAnimationFrame(draw);
+    // Touch/mouse control
+    canvas.addEventListener("touchstart", handleTap);
+    canvas.addEventListener("mousedown", handleTap);
+    
+    // Restart button
+    restartBtn.addEventListener("click", () => {
+        resetGame();
+        canvas.classList.remove("hidden");
+        startScreen.classList.add("hidden");
+    });
+    
+    // Button hover effects
+    restartBtn.addEventListener("mouseenter", () => restartBtn.style.transform = "scale(1.05)");
+    restartBtn.addEventListener("mouseleave", () => restartBtn.style.transform = "scale(1)");
+}
+
+// Handle resize
+function handleResize() {
+    window.addEventListener('resize', () => {
+        setupCanvas();
+        adjustForScreenSize();
+    });
+}
+
+// Initialize game
+function initGame() {
+    adjustForScreenSize();
+    handleControls();
+    handleResize();
+    setupVolumeControls(); // Initialize volume controls
+}
+
+initGame();

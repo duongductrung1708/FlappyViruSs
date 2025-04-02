@@ -1,80 +1,255 @@
+/* Reset và Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     height: 100vh;
-    background-color: #87CEEB;
+    background: linear-gradient(to bottom, #56ccf2, #2f80ed);
     overflow: hidden;
-    /* Ngăn cuộn trên mobile */
+    font-family: 'Arial', sans-serif;
 }
 
+/* Game Container */
 .game-container {
     position: relative;
     width: 100%;
     height: 100%;
-    /* Chiếm toàn bộ chiều cao body */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
+/* Start Screen */
+.start-screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    z-index: 10;
+    text-align: center;
+}
+
+.start-screen h1 {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    text-shadow: 3px 3px 0 #000;
+    animation: pulse 1.5s infinite;
+}
+
+.start-screen p {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    animation: blink 1.5s infinite;
+}
+
+.bird-preview {
+    width: 60px;
+    height: 45px;
+    background: url('images/16f842d25d5aed04b44b-removebg-preview.png') no-repeat center center;
+    background-size: contain;
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Canvas Style */
 #gameCanvas {
     width: 100%;
     height: 100%;
-    /* Chiếm toàn bộ kích thước của game-container */
     max-width: 100%;
-    /* Giới hạn chiều rộng tối đa */
     max-height: 100%;
-    /* Giới hạn chiều cao tối đa */
-    border: 2px solid #333;
-    /* Viền đậm hơn, màu tối */
-    background: url('images/Premium Vector _ Blur Coronavirus 2019-nCoV on White background,medical healthcare and microbiology concept,Design for COVID-19 outbreaking_.jpg') no-repeat center center;
+    background:
+        linear-gradient(rgba(135, 206, 235, 0.8), rgba(255, 255, 255, 0.8)),
+        url('images/Premium Vector _ Blur Coronavirus 2019-nCoV on White background,medical healthcare and microbiology concept,Design for COVID-19 outbreaking_.jpg') no-repeat center center;
     background-size: cover;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-    /* Thêm bóng để đẹp hơn */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
+/* Game Over Screen */
 .game-over {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.9);
-    /* Tăng độ đậm của nền */
+    background: linear-gradient(145deg, #1a2a6c, #b21f1f);
     color: white;
-    padding: 30px;
+    padding: 40px;
     text-align: center;
-    border-radius: 15px;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-    /* Thêm bóng sáng */
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+    border: 3px solid white;
+    z-index: 20;
+    animation: popIn 0.5s ease-out;
 }
 
 .game-over h1 {
     margin: 0;
-    font-size: 48px;
-    /* Tăng kích thước chữ */
-    font-family: 'Arial', sans-serif;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-    /* Thêm bóng chữ */
+    font-size: 2.5rem;
+    text-shadow: 2px 2px 0 #000;
+    margin-bottom: 20px;
 }
 
 .game-over p {
-    font-size: 28px;
-    margin: 10px 0;
+    font-size: 1.8rem;
+    margin: 20px 0;
+    text-shadow: 1px 1px 0 #000;
 }
 
 #restartBtn {
-    padding: 12px 25px;
-    font-size: 20px;
+    padding: 15px 30px;
+    font-size: 1.2rem;
     cursor: pointer;
-    background-color: #4CAF50;
+    background: linear-gradient(to bottom, #4CAF50, #2E7D32);
     color: white;
     border: none;
-    border-radius: 8px;
-    transition: background-color 0.3s ease;
-    /* Hiệu ứng chuyển màu */
+    border-radius: 50px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 0 #1B5E20;
+    outline: none;
 }
 
 #restartBtn:hover {
-    background-color: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #1B5E20;
+}
+
+#restartBtn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 0 #1B5E20;
+}
+
+/* Thêm vào file styles.css */
+
+.volume-control {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 30;
+}
+
+#volumeBtn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#volumeSlider {
+    width: 100px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+#volumeSlider:hover {
+    opacity: 1;
+}
+
+/* Responsive cho mobile */
+@media (max-width: 768px) {
+    .volume-control {
+        top: 10px;
+        right: 10px;
+    }
+
+    #volumeBtn {
+        font-size: 20px;
+    }
+
+    #volumeSlider {
+        width: 80px;
+    }
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+    }
+
+    80% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .start-screen h1 {
+        font-size: 2rem;
+    }
+
+    .start-screen p {
+        font-size: 1.2rem;
+    }
+
+    .game-over h1 {
+        font-size: 2rem;
+    }
+
+    .game-over p {
+        font-size: 1.2rem;
+    }
+
+    #restartBtn {
+        padding: 12px 24px;
+        font-size: 1rem;
+    }
 }
 
 .hidden {
