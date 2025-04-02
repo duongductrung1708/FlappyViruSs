@@ -16,9 +16,11 @@ const game = {
         y: 300,
         width: 60,
         height: 45,
-        gravity: 0.5,
+        gravity: 0.4,
         lift: -10,
-        velocity: 0
+        velocity: 0,
+        initialBoost: 1, // Initial upward speed
+        initialBoostDuration: 40 // Frames of initial boost
     },
     pipes: [],
     gap: 200,
@@ -28,7 +30,9 @@ const game = {
     isRunning: false,
     lastTime: 0,
     pipeInterval: null,
-    animationFrameId: null
+    animationFrameId: null,
+    initialBoostCounter: 0, // Counter for initial boost
+    isInitialBoost: false // Initial boost state
 };
 
 // Setup canvas
@@ -140,9 +144,20 @@ function draw() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Update bird position
-    game.bird.velocity += game.bird.gravity;
-    game.bird.y += game.bird.velocity;
+    // Handle initial boost phase
+    if (game.isInitialBoost) {
+        game.bird.y -= game.bird.initialBoost;
+        game.initialBoostCounter++;
+        
+        // End initial boost phase
+        if (game.initialBoostCounter >= game.bird.initialBoostDuration) {
+            game.isInitialBoost = false;
+        }
+    } else {
+        // Normal physics after initial boost
+        game.bird.velocity += game.bird.gravity;
+        game.bird.y += game.bird.velocity;
+    }
 
     // Check ground/ceiling collision
     if (game.bird.y + game.bird.height > canvas.height || game.bird.y < 0) {
@@ -218,6 +233,8 @@ function startGame() {
     startScreen.classList.add("hidden");
     canvas.classList.remove("hidden");
     game.isRunning = true;
+    game.isInitialBoost = true; // Enable initial boost
+    game.initialBoostCounter = 0; // Reset boost counter
     game.score = 0;
     if (currentScoreDisplay) {
         currentScoreDisplay.textContent = "0";
@@ -258,6 +275,8 @@ function resetGame() {
     game.pipes = [];
     game.score = 0;
     game.isRunning = true;
+    game.isInitialBoost = true; // Enable initial boost on reset
+    game.initialBoostCounter = 0; // Reset boost counter
     gameOverScreen.classList.add("hidden");
     
     // Reset music with current volume
@@ -282,7 +301,7 @@ function handleTap(e) {
     e.preventDefault();
     if (!game.isRunning && !startScreen.classList.contains("hidden")) {
         startGame();
-    } else if (game.isRunning) {
+    } else if (game.isRunning && !game.isInitialBoost) { // Only allow control after initial boost
         game.bird.velocity = game.bird.lift;
     }
 }
@@ -292,15 +311,11 @@ function handleControls() {
     document.addEventListener("keydown", (e) => {
         if (e.code === "Space") {
             e.preventDefault();
-            if (!game.isRunning && !startScreen.classList.contains("hidden")) {
-                startGame();
-            } else if (game.isRunning) {
-                game.bird.velocity = game.bird.lift;
-            }
+            handleTap(e);
         }
     });
 
-    // Touch control - sửa lại phần này
+    // Touch control
     startScreen.addEventListener("touchstart", function(e) {
         e.preventDefault();
         if (!game.isRunning) {
@@ -308,10 +323,10 @@ function handleControls() {
         }
     });
 
-    // Game control - chỉ hoạt động khi game đang chạy
+    // Game control
     canvas.addEventListener("touchstart", function(e) {
         e.preventDefault();
-        if (game.isRunning) {
+        if (game.isRunning && !game.isInitialBoost) {
             game.bird.velocity = game.bird.lift;
         }
     });
@@ -319,7 +334,7 @@ function handleControls() {
     // Mouse control
     canvas.addEventListener("mousedown", function(e) {
         e.preventDefault();
-        if (game.isRunning) {
+        if (game.isRunning && !game.isInitialBoost) {
             game.bird.velocity = game.bird.lift;
         }
     });
@@ -349,7 +364,7 @@ function initGame() {
     adjustForScreenSize();
     handleControls();
     handleResize();
-    setupVolumeControls(); // Initialize volume controls
+    setupVolumeControls();
 }
 
 initGame();
