@@ -171,7 +171,7 @@ function draw() {
 
         // Draw blur effect around pipes
         const blurRadius = 15;
-        const glowColor = 'rgba(255, 255, 255, 0.3)';
+        const glowColor = 'rgba(0, 0, 0, 0.3)';
         
         // Top pipe blur
         ctx.save();
