@@ -292,13 +292,37 @@ function handleControls() {
     document.addEventListener("keydown", (e) => {
         if (e.code === "Space") {
             e.preventDefault();
-            handleTap(e);
+            if (!game.isRunning && !startScreen.classList.contains("hidden")) {
+                startGame();
+            } else if (game.isRunning) {
+                game.bird.velocity = game.bird.lift;
+            }
         }
     });
 
-    // Touch/mouse control
-    canvas.addEventListener("touchstart", handleTap);
-    canvas.addEventListener("mousedown", handleTap);
+    // Touch control - sửa lại phần này
+    startScreen.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        if (!game.isRunning) {
+            startGame();
+        }
+    });
+
+    // Game control - chỉ hoạt động khi game đang chạy
+    canvas.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        if (game.isRunning) {
+            game.bird.velocity = game.bird.lift;
+        }
+    });
+    
+    // Mouse control
+    canvas.addEventListener("mousedown", function(e) {
+        e.preventDefault();
+        if (game.isRunning) {
+            game.bird.velocity = game.bird.lift;
+        }
+    });
     
     // Restart button
     restartBtn.addEventListener("click", () => {
