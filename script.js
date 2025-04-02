@@ -6,8 +6,8 @@ const restartBtn = document.getElementById("restartBtn");
 const backgroundMusic = document.getElementById("backgroundMusic");
 
 // Thiết lập canvas
-canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth; // Tối đa 800px
-canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight; // Tối đa 600px
+canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
+canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight;
 
 // Tải hình ảnh chim
 const birdImg = new Image();
@@ -27,36 +27,59 @@ pipeImages[2].src = "images/pngtree-top-rated-toothbrushes-for-effective-plaque-
 let bird = {
     x: 50,
     y: canvas.height / 2,
-    width: 60,    // Tăng từ 40 lên 60
-    height: 45,   // Tăng từ 30 lên 45
-    gravity: 0.3,
-    lift: -7,
+    width: 60,
+    height: 45,
+    gravity: 0.7,
+    lift: -10,
     velocity: 0
 };
 
 let pipes = [];
-let gap = 200;
-let pipeWidth = 50;
-let pipeSpeed = 1;
+let gap = window.innerWidth < 768 ? 250 : 200;
+let pipeWidth = window.innerWidth < 768 ? 70 : 50;
+let pipeSpeed = window.innerWidth < 768 ? 120 : 150;
 let score = 0;
 let gameRunning = true;
+let lastTime = performance.now();
+let pipeInterval;
+
+// Điều chỉnh cho kích thước màn hình
+function adjustForScreenSize() {
+    const isMobile = window.innerWidth < 768;
+    
+    gap = isMobile ? 250 : 200;
+    pipeWidth = isMobile ? 70 : 50;
+    pipeSpeed = isMobile ? 120 : 150;
+    bird.width = isMobile ? 70 : 60;
+    bird.height = isMobile ? 52 : 45;
+    
+    clearInterval(pipeInterval);
+    pipeInterval = setInterval(spawnPipe, isMobile ? 3500 : 3000);
+}
 
 // Thêm ống mới với ảnh random
 function spawnPipe() {
     if (!gameRunning) return;
-    let pipeHeight = Math.floor(Math.random() * (canvas.height / 2 - 100)) + 100;
-    const randomPipeImg = pipeImages[Math.floor(Math.random() * pipeImages.length)]; // Random ảnh
+    
+    const minHeight = 100;
+    const maxHeight = canvas.height - gap - minHeight;
+    let pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+    
+    const randomPipeImg = pipeImages[Math.floor(Math.random() * pipeImages.length)];
     pipes.push({
         x: canvas.width,
         topHeight: pipeHeight,
-        pipeImg: randomPipeImg, // Gán ảnh random cho ống
+        pipeImg: randomPipeImg,
         passed: false
     });
 }
 
 // Vẽ trò chơi
-function draw() {
+function draw(currentTime) {
     if (!gameRunning) return;
+
+    const dt = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -64,8 +87,8 @@ function draw() {
     ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
 
     // Cập nhật vị trí chim
-    bird.velocity += bird.gravity;
-    bird.y += bird.velocity;
+    bird.velocity += bird.gravity * dt * 60;
+    bird.y += bird.velocity * dt * 60;
 
     if (bird.y + bird.height > canvas.height || bird.y < 0) {
         endGame();
@@ -75,7 +98,7 @@ function draw() {
     // Vẽ và di chuyển ống
     for (let i = pipes.length - 1; i >= 0; i--) {
         let p = pipes[i];
-        p.x -= pipeSpeed;
+        p.x -= pipeSpeed * dt;
 
         // Hiệu ứng mờ xung quanh cột
         ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
@@ -106,14 +129,14 @@ function draw() {
     }
 
     // Vẽ điểm số
-    ctx.fillStyle = "white"; // Đổi màu chữ cho nổi bật
+    ctx.fillStyle = "white";
     ctx.font = "24px Arial";
     ctx.fillText("Score: " + score, 20, 40);
 
     requestAnimationFrame(draw);
 }
 
-// Điều khiển chim (PC và Mobile)
+// Điều khiển chim
 document.addEventListener("keydown", (e) => {
     if (e.code === "Space" && gameRunning) {
         bird.velocity = bird.lift;
@@ -145,17 +168,20 @@ function resetGame() {
     gameOverScreen.classList.add("hidden");
     backgroundMusic.currentTime = 0;
     backgroundMusic.play();
+    adjustForScreenSize();
     spawnPipe();
-    draw();
+    lastTime = performance.now();
+    requestAnimationFrame(draw);
 }
 
 // Nút chơi lại
 restartBtn.addEventListener("click", resetGame);
 
-// Tạo ống mới mỗi 3 giây
-setInterval(spawnPipe, 3000);
+// Theo dõi thay đổi kích thước màn hình
+window.addEventListener('resize', adjustForScreenSize);
 
-// Bắt đầu game
+// Khởi tạo game
+adjustForScreenSize();
 backgroundMusic.play();
 spawnPipe();
-draw();
+requestAnimationFrame(draw);
