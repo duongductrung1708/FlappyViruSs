@@ -8,8 +8,8 @@ const startScreen = document.getElementById("startScreen");
 const currentScoreDisplay = document.getElementById("currentScore");
 const volumeBtn = document.getElementById("volumeBtn");
 const volumeSlider = document.getElementById("volumeSlider");
-const highScoreStart = document.getElementById("highScoreStart"); // High Score trên startScreen
-const highScoreEnd = document.getElementById("highScoreEnd"); // High Score trên gameOver
+const highScoreStart = document.getElementById("highScoreStart");
+const highScoreEnd = document.getElementById("highScoreEnd");
 
 // Game state object
 const game = {
@@ -18,24 +18,24 @@ const game = {
     y: 300,
     width: 60,
     height: 45,
-    gravity: 0.4,
-    lift: -10,
-    velocity: 0,
-    initialBoost: 1, // Initial upward speed
-    initialBoostDuration: 40, // Frames of initial boost
+    gravity: 2500, // Gia tốc rơi (pixel/giây^2) - tăng mạnh để rơi nhanh hơn
+    lift: -800,   // Lực nhảy (pixel/giây) - tăng để nhảy mạnh hơn, cân bằng với gravity
+    velocity: 0,  // Vận tốc (pixel/giây)
+    initialBoost: 300, // Tốc độ bay lên ban đầu (pixel/giây)
+    initialBoostDuration: 0.3 // Thời gian boost ban đầu (giây)
   },
   pipes: [],
   gap: 200,
   pipeWidth: 40,
-  pipeSpeed: 2,
+  pipeSpeed: 300, // Tốc độ ống (pixel/giây)
   score: 0,
-  highScore: 0, // Thêm High Score vào game state
+  highScore: 0,
   isRunning: false,
-  lastTime: 0,
+  lastTime: performance.now(),
   pipeInterval: null,
   animationFrameId: null,
-  initialBoostCounter: 0, // Counter for initial boost
-  isInitialBoost: false, // Initial boost state
+  initialBoostTime: 0,
+  isInitialBoost: false
 };
 
 // Load High Score từ localStorage khi khởi động game
@@ -94,17 +94,14 @@ const pipeImages = [
 
 // Volume control functions
 function setupVolumeControls() {
-  // Set initial volume
   backgroundMusic.volume = 0.7;
   volumeSlider.value = 0.7;
 
-  // Handle volume slider changes
   volumeSlider.addEventListener("input", function () {
     backgroundMusic.volume = this.value;
     updateVolumeIcon();
   });
 
-  // Handle mute button click
   volumeBtn.addEventListener("click", function () {
     if (backgroundMusic.volume > 0) {
       backgroundMusic.volume = 0;
@@ -116,7 +113,6 @@ function setupVolumeControls() {
     updateVolumeIcon();
   });
 
-  // Update volume icon based on current volume
   function updateVolumeIcon() {
     if (backgroundMusic.volume === 0) {
       volumeBtn.textContent = "🔇";
@@ -137,7 +133,7 @@ function adjustForScreenSize() {
   game.bird.height = isMobile ? 52 : 45;
 
   clearInterval(game.pipeInterval);
-  game.pipeInterval = setInterval(spawnPipe, isMobile ? 2000 : 1500);
+  game.pipeInterval = setInterval(spawnPipe, isMobile ? 1500 : 1200);
 }
 
 // Spawn new pipes
@@ -146,16 +142,14 @@ function spawnPipe() {
 
   const minHeight = 100;
   const maxHeight = canvas.height - game.gap - minHeight;
-  const pipeHeight =
-    Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
-  const randomPipeImg =
-    pipeImages[Math.floor(Math.random() * pipeImages.length)];
+  const pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+  const randomPipeImg = pipeImages[Math.floor(Math.random() * pipeImages.length)];
 
   game.pipes.push({
     x: canvas.width,
     topHeight: pipeHeight,
     pipeImg: randomPipeImg,
-    passed: false,
+    passed: false
   });
 }
 
@@ -165,30 +159,32 @@ function checkCollision(pipe) {
   return (
     bird.x + bird.width > pipe.x &&
     bird.x < pipe.x + game.pipeWidth &&
-    (bird.y < pipe.topHeight ||
-      bird.y + bird.height > pipe.topHeight + game.gap)
+    (bird.y < pipe.topHeight || bird.y + bird.height > pipe.topHeight + game.gap)
   );
 }
 
 // Draw game
-function draw() {
+function draw(currentTime) {
+  const dt = Math.min((currentTime - game.lastTime) / 1000, 0.1); // Delta time (giới hạn tối đa 0.1s)
+  game.lastTime = currentTime;
+
   if (!game.isRunning) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Handle initial boost phase
   if (game.isInitialBoost) {
-    game.bird.y -= game.bird.initialBoost;
-    game.initialBoostCounter++;
+    game.bird.y -= game.bird.initialBoost * dt;
+    game.initialBoostTime += dt;
 
-    // End initial boost phase
-    if (game.initialBoostCounter >= game.bird.initialBoostDuration) {
+    if (game.initialBoostTime >= game.bird.initialBoostDuration) {
       game.isInitialBoost = false;
+      game.bird.velocity = 0;
     }
   } else {
     // Normal physics after initial boost
-    game.bird.velocity += game.bird.gravity;
-    game.bird.y += game.bird.velocity;
+    game.bird.velocity += game.bird.gravity * dt;
+    game.bird.y += game.bird.velocity * dt;
   }
 
   // Check ground/ceiling collision
@@ -199,33 +195,22 @@ function draw() {
   // Process pipes
   for (let i = game.pipes.length - 1; i >= 0; i--) {
     const pipe = game.pipes[i];
-    pipe.x -= game.pipeSpeed;
+    pipe.x -= game.pipeSpeed * dt;
 
     // Draw blur effect around pipes
     const blurRadius = 15;
     const glowColor = "rgba(0, 0, 0, 0.3)";
 
-    // Top pipe blur
     ctx.save();
     ctx.shadowColor = glowColor;
     ctx.shadowBlur = blurRadius;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
     ctx.fillStyle = glowColor;
-    ctx.fillRect(
-      pipe.x - blurRadius / 2,
-      0,
-      game.pipeWidth + blurRadius,
-      pipe.topHeight
-    );
+    ctx.fillRect(pipe.x - blurRadius / 2, 0, game.pipeWidth + blurRadius, pipe.topHeight);
     ctx.restore();
 
-    // Bottom pipe blur
     ctx.save();
     ctx.shadowColor = glowColor;
     ctx.shadowBlur = blurRadius;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
     ctx.fillStyle = glowColor;
     ctx.fillRect(
       pipe.x - blurRadius / 2,
@@ -266,13 +251,7 @@ function draw() {
   }
 
   // Draw bird
-  ctx.drawImage(
-    birdImg,
-    game.bird.x,
-    game.bird.y,
-    game.bird.width,
-    game.bird.height
-  );
+  ctx.drawImage(birdImg, game.bird.x, game.bird.y, game.bird.width, game.bird.height);
 
   // Draw score
   ctx.fillStyle = "white";
@@ -287,18 +266,15 @@ function startGame() {
   startScreen.classList.add("hidden");
   canvas.classList.remove("hidden");
   game.isRunning = true;
-  game.isInitialBoost = true; // Enable initial boost
-  game.initialBoostCounter = 0; // Reset boost counter
+  game.isInitialBoost = true;
+  game.initialBoostTime = 0;
   game.score = 0;
   if (currentScoreDisplay) {
     currentScoreDisplay.textContent = "0";
   }
 
-  // Play music with current volume
   backgroundMusic.currentTime = 0;
-  backgroundMusic.play().catch((e) => {
-    console.log("Autoplay prevented:", e);
-  });
+  backgroundMusic.play().catch((e) => console.log("Autoplay prevented:", e));
 
   resetGame();
 }
@@ -306,13 +282,13 @@ function startGame() {
 // End game
 function endGame() {
   game.isRunning = false;
+  game.isInitialBoost = false;
   cancelAnimationFrame(game.animationFrameId);
   backgroundMusic.pause();
   finalScoreText.textContent = game.score;
-  saveHighScore(); // Cập nhật High Score khi game kết thúc
+  saveHighScore();
   gameOverScreen.classList.remove("hidden");
 
-  // Shake effect
   canvas.style.transform = "translateX(5px)";
   setTimeout(() => {
     canvas.style.transform = "translateX(-5px)";
@@ -322,7 +298,6 @@ function endGame() {
 
 // Reset game
 function resetGame() {
-  // Keep current volume when resetting
   const currentVolume = backgroundMusic.volume;
 
   game.bird.y = canvas.height / 2;
@@ -330,16 +305,13 @@ function resetGame() {
   game.pipes = [];
   game.score = 0;
   game.isRunning = true;
-  game.isInitialBoost = true; // Enable initial boost on reset
-  game.initialBoostCounter = 0; // Reset boost counter
+  game.isInitialBoost = true;
+  game.initialBoostTime = 0;
   gameOverScreen.classList.add("hidden");
 
-  // Reset music with current volume
   backgroundMusic.currentTime = 0;
   backgroundMusic.volume = currentVolume;
-  backgroundMusic.play().catch((e) => {
-    console.log("Music restart prevented:", e);
-  });
+  backgroundMusic.play().catch((e) => console.log("Music restart prevented:", e));
 
   adjustForScreenSize();
   spawnPipe();
@@ -348,6 +320,7 @@ function resetGame() {
     currentScoreDisplay.textContent = "0";
   }
 
+  game.lastTime = performance.now();
   game.animationFrameId = requestAnimationFrame(draw);
 }
 
@@ -357,13 +330,11 @@ function handleTap(e) {
   if (!game.isRunning && !startScreen.classList.contains("hidden")) {
     startGame();
   } else if (game.isRunning && !game.isInitialBoost) {
-    // Only allow control after initial boost
     game.bird.velocity = game.bird.lift;
   }
 }
 
 function handleControls() {
-  // Keyboard control
   document.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       e.preventDefault();
@@ -371,46 +342,20 @@ function handleControls() {
     }
   });
 
-  // Touch control
-  startScreen.addEventListener("touchstart", function (e) {
-    e.preventDefault();
-    if (!game.isRunning) {
-      startGame();
-    }
-  });
+  startScreen.addEventListener("touchstart", handleTap);
+  canvas.addEventListener("touchstart", handleTap);
 
-  // Game control
-  canvas.addEventListener("touchstart", function (e) {
-    e.preventDefault();
-    if (game.isRunning && !game.isInitialBoost) {
-      game.bird.velocity = game.bird.lift;
-    }
-  });
+  startScreen.addEventListener("mousedown", handleTap);
+  canvas.addEventListener("mousedown", handleTap);
 
-  // Mouse control
-  canvas.addEventListener("mousedown", function (e) {
-    e.preventDefault();
-    if (game.isRunning && !game.isInitialBoost) {
-      game.bird.velocity = game.bird.lift;
-    }
-  });
-
-  // Restart button
   restartBtn.addEventListener("click", () => {
     resetGame();
     canvas.classList.remove("hidden");
     startScreen.classList.add("hidden");
   });
 
-  // Button hover effects
-  restartBtn.addEventListener(
-    "mouseenter",
-    () => (restartBtn.style.transform = "scale(1.05)")
-  );
-  restartBtn.addEventListener(
-    "mouseleave",
-    () => (restartBtn.style.transform = "scale(1)")
-  );
+  restartBtn.addEventListener("mouseenter", () => (restartBtn.style.transform = "scale(1.05)"));
+  restartBtn.addEventListener("mouseleave", () => (restartBtn.style.transform = "scale(1)"));
 }
 
 // Handle resize
@@ -423,11 +368,12 @@ function handleResize() {
 
 // Initialize game
 function initGame() {
-  loadHighScore(); // Tải High Score khi khởi động
+  loadHighScore();
   adjustForScreenSize();
   handleControls();
   handleResize();
   setupVolumeControls();
+  game.animationFrameId = requestAnimationFrame(draw);
 }
 
 initGame();
